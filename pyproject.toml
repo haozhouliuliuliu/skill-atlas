@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skill-atlas"
+version = "0.1.0"
+description = "Turn GitHub search results into a replaceable capability-slot index, with evidence-based quality filtering."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "haozhouliuliu" }]
+keywords = ["github", "knowledge-base", "obsidian", "awesome-list", "trending"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+skill-atlas = "skill_atlas.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/haozhouliuliu/skill-atlas"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

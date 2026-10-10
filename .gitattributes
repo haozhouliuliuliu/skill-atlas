@@ -1,0 +1,11 @@
+# 统一换行符：仓库内与检出后都用 LF。
+# 不加这一条，Windows 上提交会把文件写成 CRLF，diff 会被换行符噪声塞满。
+* text=auto eol=lf
+
+# 明确的二进制类型（将来加截图/示例数据时不必再改）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary

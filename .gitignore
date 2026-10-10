@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Test / coverage artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data produced by running the pipelines.
+# The vault is a build artefact — regenerate it instead of committing it.
+/out/
+/data/
+/vault/
+examples/out/
+.test-tmp/
+
+# Secrets: never commit an API token.
+.token
+.env

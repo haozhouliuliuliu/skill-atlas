@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run the test suite (no dependencies required)
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Run the offline demo on every platform
+        # 这一步会真实渲染一遍库。它抓得住平台差异的 bug ——
+        # 例如日志文件名里出现冒号，在 Windows 上会静默写不出文件。
+        run: python examples/demo.py --out examples/out
+
+      - name: Assert the demo actually rendered a vault
+        run: |
+          python - <<'PY'
+          import pathlib
+          out = pathlib.Path("examples/out")
+          slots = list((out / "10-能力位").glob("*.md"))
+          logs = list((out / "30-检索日志").glob("*.md"))
+          assert len(slots) == 54, f"expected 54 slot notes, found {len(slots)}"
+          assert logs, "no search-log notes were written"
+          for name in ("README.md", "01-能力位总表.md", "02-项目蓝图.md"):
+              assert (out / name).exists(), f"missing {name}"
+          print(f"vault OK: {len(slots)} slots, {len(logs)} logs")
+          PY
+        shell: bash
+
+      - name: Offline CLI walkthrough (no network, no token)
+        # 这一组是「按 README 写的用法跑一遍」。src-layout 的包需要
+        # PYTHONPATH=src（或 pip install -e .），漏掉它会让 CLI 完全不可用 ——
+        # 这正是本地模拟 clone 时抓到的问题，所以要在 CI 里钉住。
+        run: |
+          set -e
+          export PYTHONPATH=src
+          python examples/prepare_data.py --out .demo/data --force
+          python -m skill_atlas.cli build --data .demo/data --vault .demo/vault --per-slot 5
+          python -m skill_atlas.cli diff --data .demo/data
+          python -m skill_atlas.cli query "日志监控" --data .demo/data --top 2
+          python -m skill_atlas.cli inspect --help > /dev/null
+          python -m skill_atlas.cli slots > /dev/null
+          test -f .demo/vault/01-能力位总表.md
+          echo "offline CLI walkthrough OK"
+        shell: bash
+
+      - name: Check the package imports cleanly and exposes its public API
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "src")
+          import skill_atlas
+          missing = [n for n in skill_atlas.__all__ if not hasattr(skill_atlas, n)]
+          assert not missing, f"missing exports: {missing}"
+          print(f"skill-atlas {skill_atlas.__version__}: {len(skill_atlas.__all__)} exports OK")
+          PY
+        shell: bash

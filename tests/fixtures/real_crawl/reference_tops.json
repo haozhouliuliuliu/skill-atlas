@@ -1,0 +1,386 @@
+{
+ "note": "在完整抓取数据上得出的 54 个能力位首选。fixture 里的数据裁减到每个能力位前 25 个候选，因此这些结论必须能被 tests/test_real_data.py 复现。",
+ "total_candidates_full": 4270,
+ "junk_full": 92,
+ "keep_per_slot": 25,
+ "tops": {
+  "磁盘与文件管理": {
+   "top": "sxyazi/yazi",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "模型接入与聚合": {
+   "top": "BerriAI/litellm",
+   "rank_score": 113,
+   "quality": 93,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "财务与票据": {
+   "top": "firefly-iii/firefly-iii",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "Agent 编排与 Harness": {
+   "top": "langgenius/dify",
+   "rank_score": 117,
+   "quality": 97,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "逆向工程与调试": {
+   "top": "NationalSecurityAgency/ghidra",
+   "rank_score": 113,
+   "quality": 93,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "Agent 记忆与检索": {
+   "top": "mem0ai/mem0",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "移动端与设备定制": {
+   "top": "topjohnwu/Magisk",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "NAS 与媒体管理": {
+   "top": "immich-app/immich",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "Agent Skill 规范与范例": {
+   "top": "rehan-remade/universal-modder",
+   "rank_score": 101,
+   "quality": 81,
+   "relevance": "榜单",
+   "candidates_in_fixture": 25
+  },
+  "Office 文档生成与解析": {
+   "top": "storytold/wordcraft",
+   "rank_score": 99,
+   "quality": 79,
+   "relevance": "榜单",
+   "candidates_in_fixture": 25
+  },
+  "截图与录屏": {
+   "top": "obsproject/obs-studio",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "机器人与嵌入式": {
+   "top": "qmk/qmk_firmware",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "本地推理引擎": {
+   "top": "ollama/ollama",
+   "rank_score": 117,
+   "quality": 97,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "CAD 与 3D": {
+   "top": "FreeCAD/FreeCAD",
+   "rank_score": 110,
+   "quality": 90,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "桌面全文检索": {
+   "top": "junegunn/fzf",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "游戏移植与 Mod": {
+   "top": "deadinside28/bloodborne_pc",
+   "rank_score": 97,
+   "quality": 77,
+   "relevance": "榜单",
+   "candidates_in_fixture": 25
+  },
+  "代码理解与检索": {
+   "top": "ast-grep/ast-grep",
+   "rank_score": 102,
+   "quality": 82,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "网络代理与穿透": {
+   "top": "clash-verge-rev/clash-verge-rev",
+   "rank_score": 115,
+   "quality": 95,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "动画与可视化": {
+   "top": "d3/d3",
+   "rank_score": 104,
+   "quality": 84,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "图像编辑": {
+   "top": "storytold/photocraft",
+   "rank_score": 110,
+   "quality": 90,
+   "relevance": "榜单",
+   "candidates_in_fixture": 25
+  },
+  "Agent 可观测与调试界面": {
+   "top": "langfuse/langfuse",
+   "rank_score": 109,
+   "quality": 89,
+   "relevance": "名字",
+   "candidates_in_fixture": 18
+  },
+  "本地音乐与媒体库": {
+   "top": "navidrome/navidrome",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "任务与项目管理": {
+   "top": "makeplane/plane",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "内容生产流水线": {
+   "top": "remotion-dev/remotion",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 7
+  },
+  "UI 组件与材质": {
+   "top": "shadcn-ui/ui",
+   "rank_score": 115,
+   "quality": 95,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "视频编辑与生成": {
+   "top": "mltframework/shotcut",
+   "rank_score": 105,
+   "quality": 85,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "文件格式转换": {
+   "top": "jgm/pandoc",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "系统1决策模型": {
+   "top": "NandhaKishorM/laya",
+   "rank_score": 108,
+   "quality": 88,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "教程与清单": {
+   "top": "vinta/awesome-python",
+   "rank_score": 119,
+   "quality": 99,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "渗透与漏洞": {
+   "top": "rapid7/metasploit-framework",
+   "rank_score": 113,
+   "quality": 93,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "矢量与 Logo 设计": {
+   "top": "penpot/penpot",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "系统清理与优化": {
+   "top": "bleachbit/bleachbit",
+   "rank_score": 100,
+   "quality": 80,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "浏览器自动化与反检测": {
+   "top": "microsoft/playwright",
+   "rank_score": 113,
+   "quality": 93,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "知识库与本体": {
+   "top": "khoj-ai/khoj",
+   "rank_score": 101,
+   "quality": 81,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "测试与质量": {
+   "top": "pytest-dev/pytest",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "数据库与数据分析": {
+   "top": "ClickHouse/ClickHouse",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "笔记与编辑器": {
+   "top": "logseq/logseq",
+   "rank_score": 109,
+   "quality": 89,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "认证与权限": {
+   "top": "keycloak/keycloak",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "文档解析与 RAG 切分": {
+   "top": "docling-project/docling",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "通知与消息": {
+   "top": "n8n-io/n8n",
+   "rank_score": 119,
+   "quality": 99,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "串口与设备通信": {
+   "top": "78/xiaozhi-esp32",
+   "rank_score": 110,
+   "quality": 90,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "双向链接与图谱分析": {
+   "top": "Graphify-Labs/graphify",
+   "rank_score": 80,
+   "quality": 95,
+   "relevance": "描述",
+   "candidates_in_fixture": 25
+  },
+  "排版与出版": {
+   "top": "jgm/pandoc",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "语音识别与合成": {
+   "top": "ggml-org/whisper.cpp",
+   "rank_score": 111,
+   "quality": 91,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "容器与部署": {
+   "top": "kubernetes/kubernetes",
+   "rank_score": 118,
+   "quality": 98,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "浏览器与插件": {
+   "top": "XIU2/UserScript",
+   "rank_score": 95,
+   "quality": 75,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "日志与监控": {
+   "top": "grafana/grafana",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "Agent 评测与回归": {
+   "top": "promptfoo/promptfoo",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 15
+  },
+  "邮件与日历": {
+   "top": "Foundry376/Mailspring",
+   "rank_score": 105,
+   "quality": 85,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "PDF 深度处理": {
+   "top": "pymupdf/PyMuPDF",
+   "rank_score": 103,
+   "quality": 83,
+   "relevance": "名字",
+   "candidates_in_fixture": 18
+  },
+  "剪贴板与快捷启动": {
+   "top": "raycast/extensions",
+   "rank_score": 107,
+   "quality": 87,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "表格与表单": {
+   "top": "tabulator-tables/tabulator",
+   "rank_score": 82,
+   "quality": 82,
+   "relevance": "topics",
+   "candidates_in_fixture": 25
+  },
+  "对象存储与文件同步": {
+   "top": "syncthing/syncthing",
+   "rank_score": 112,
+   "quality": 92,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  },
+  "定时任务与调度": {
+   "top": "apache/airflow",
+   "rank_score": 114,
+   "quality": 94,
+   "relevance": "名字",
+   "candidates_in_fixture": 25
+  }
+ }
+}
