@@ -24,7 +24,7 @@ from .models import Repo
 from .slots import Slot
 
 DEFAULT_API = "https://api.github.com"
-DEFAULT_UA = "skill-atlas/0.1 (+https://github.com/haozhouliuliu/skill-atlas)"
+DEFAULT_UA = "skill-atlas/0.1 (+https://github.com/haozhouliuliuliu/skill-atlas)"
 
 #: 检索式里统一附加的最小星标门槛，过滤掉噪声项目
 MIN_STARS = 200

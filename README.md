@@ -120,7 +120,7 @@ outrank `d3/d3` itself.
 ## See it work — no network, no token
 
 ```bash
-git clone https://github.com/haozhouliuliu/skill-atlas
+git clone https://github.com/haozhouliuliuliu/skill-atlas
 cd skill-atlas
 python examples/demo.py
 ```
@@ -174,11 +174,11 @@ that emptiness is the signal.
 ## Install and use
 
 ```bash
-git clone https://github.com/haozhouliuliu/skill-atlas
+git clone https://github.com/haozhouliuliuliu/skill-atlas
 cd skill-atlas
 
 # Nothing to install for the library or the tests — standard library only.
-python -m unittest discover -s tests -t .     # 144 tests
+python -m unittest discover -s tests -t .     # 152 tests
 python examples/demo.py                       # full pipeline, offline
 ```
 
@@ -324,12 +324,12 @@ Version 0.1, **not yet published**.
 | Module | State |
 |---|---|
 | `models.py` · `quality.py` · `scoring.py` · `slots.py` | 50 tests |
-| `index.py` · `vault.py` · `query.py` · `snapshot.py` | 44 tests |
+| `index.py` · `vault.py` · `query.py` · `snapshot.py` | 47 tests |
 | `api.py` (HTTP layer stubbed) | 20 tests |
-| `cli.py` wiring · end-to-end over the bundled sample | 21 tests |
+| `cli.py` wiring · end-to-end over the bundled sample | 26 tests |
 | **regression on the committed real crawl** | 9 tests |
 
-**144 tests, all passing, zero dependencies.** CI runs them on Linux, macOS and
+**152 tests, all passing, zero dependencies.** CI runs them on Linux, macOS and
 Windows at Python 3.10 and 3.12, plus the offline demo and an offline CLI
 walkthrough, so every command documented above is executed on every push.
 
