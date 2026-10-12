@@ -21,11 +21,13 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from skill_atlas import store  # noqa: E402
+from skill_atlas.console import ensure_safe_output  # noqa: E402
 
 from examples import sample_data  # noqa: E402
 
 
 def main() -> int:
+    ensure_safe_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path("data"))
     parser.add_argument("--force", action="store_true",

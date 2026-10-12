@@ -18,6 +18,7 @@ import sys
 
 from . import __version__, store
 from .api import GitHubError, SearchClient, resolve_token
+from .console import ensure_safe_output
 from .index import WINDOW_ORDER, Atlas, RankingResult, build_atlas
 from .models import Repo
 from .quality import low_value_reason
@@ -401,6 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    ensure_safe_output()
     parser = build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

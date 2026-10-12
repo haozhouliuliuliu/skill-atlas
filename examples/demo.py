@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from skill_atlas import build_atlas, query_atlas, render_vault  # noqa: E402
+from skill_atlas.console import ensure_safe_output  # noqa: E402
 from skill_atlas.quality import low_value_reason  # noqa: E402
 
 from examples import sample_data  # noqa: E402
@@ -32,6 +33,8 @@ LINE = "─" * 74
 
 
 def main() -> int:
+    # 输出里有中文；在非 UTF-8 的控制台/管道上必须降级而不是崩掉。
+    ensure_safe_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=pathlib.Path,
                         default=PROJECT_ROOT / "examples" / "out")

@@ -85,7 +85,7 @@ one.
 
 ---
 
-## Part 2 — Fourteen defects
+## Part 2 — Sixteen defects
 
 ### 1. Referencing a constant from the wrong module
 
@@ -487,6 +487,89 @@ trimmed to 1.1 MB, under `tests/fixtures/real_crawl/`:
 assertions about the past; they are a test that runs on every push. It also turned
 out to be the sharpest regression test in the suite — it fails on real data if
 scoring or relevance ordering drifts, where the synthetic sample might not notice.
+
+---
+
+## Part 2b — Two defects found only after publishing
+
+Both were caught by the first CI run on GitHub, not by any of the 152 tests that
+passed locally. That is the point of the two that follow.
+
+### 15. The metadata advertised a Python version the code could not run on
+
+**Symptom.** CI was red on Python 3.10 for all three operating systems while 3.12
+passed everywhere. Every test passed locally, because the local interpreter is 3.12.
+
+**Cause.** One f-string contained a backslash inside its replacement field:
+
+```python
+f"  - domain/{re.sub(r'[\s/]+', '-', domain_name).lower()}"
+```
+
+Backslashes inside f-string expressions were only allowed in **Python 3.12** (PEP
+701). On 3.10 and 3.11 this is a `SyntaxError` at import time — the whole package
+fails to load:
+
+```
+SyntaxError: f-string expression part cannot include a backslash
+```
+
+`pyproject.toml` declared `requires-python = ">=3.10"`. The metadata was untrue, and
+nothing in the test suite could have caught it.
+
+**Aggravating factor.** Two attempts at static detection both missed it:
+
+* `ast.parse(source, feature_version=(3, 10))` accepts the file. The
+  `feature_version` argument narrows the grammar but does not enforce this
+  particular restriction.
+* A grep for APIs added after 3.10 (`tomllib`, `typing.Self`, `datetime.UTC`, …)
+  found nothing, because this is syntax, not an API.
+
+**What actually found it.** Downloading a Python 3.10 interpreter and running the
+suite under it. 8.2 MB and two minutes, versus guessing from a 403 on the log
+download.
+
+**Fix.** Hoist the expression out of the f-string, with a comment explaining why.
+
+**Lesson.** A version floor in package metadata is a **testable claim**, and the only
+test for it is running on that version. Declaring `>=3.10` while testing on 3.12 is
+not a smaller version of the same test — it is a different claim.
+
+**Follow-on.** The CI matrix ran 3.10 and 3.12 and therefore tested two of the
+three affected versions. It now runs 3.10, 3.11 and 3.12 — the middle one existed
+precisely because a matrix built from "oldest and newest" leaves a gap.
+
+### 16. Chinese output crashed on Windows whenever stdout was a pipe
+
+**Symptom.** The same CI run failed the *offline demo* step on Windows/py3.12:
+
+```
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-73
+```
+
+**Cause.** Python on Windows writes `stdout` using the locale's code page — cp1252
+on an English install. This project prints Chinese. When GitHub Actions captures
+output, `stdout` is a pipe, so the console's UTF-8 handling never applies and the
+encoding is cp1252, which cannot represent any of it. The first `print` of a
+box-drawing line killed the process.
+
+This was not a CI-only problem: running `python examples/demo.py` in a default
+English-Windows terminal would have failed the same way for a real user.
+
+**Fix.** Two parts, because there are two audiences:
+
+* the code calls `ensure_safe_output()`, which sets `errors="replace"` on
+  `stdout`/`stderr` — **keeping the existing encoding**. Unencodable characters
+  become `?` instead of an exception. Replacing the encoding with UTF-8 would have
+  broken the *working* case: a Chinese Windows console (cp936) renders Chinese
+  correctly today, and would show mojibake if the encoding were forced.
+* the workflow sets `PYTHONIOENCODING=utf-8`, so CI logs keep the full characters
+  rather than a row of question marks.
+
+**Lesson.** "It works on my machine" is partly a statement about the **encoding of
+stdout**, which differs between a terminal, a pipe, and a CI runner. The interesting
+part is that the safe fix is not "force UTF-8 everywhere" — it is "stop crashing,
+without taking away the case that already worked".
 
 ---
 

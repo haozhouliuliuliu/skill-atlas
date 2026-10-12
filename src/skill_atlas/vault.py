@@ -226,6 +226,12 @@ def _repo_note(candidate: Candidate) -> str:
     slot_names = list(candidate.slots)
     slot_tags = [re.sub(r"[\s/]+", "-", s).lower() for s in slot_names]
     domain = next((s for s in all_slots() if s.name in candidate.slots), None)
+    domain_name = domain.domain if domain else "待归位"
+    # 注意：这里必须先算出 domain_tag 再插进 f-string。
+    # 早期版本把 re.sub(r"[\s/]+", ...) 直接写在 f-string 表达式里，
+    # 那要求 Python 3.12+（PEP 701 才允许表达式含反斜杠），
+    # 而 pyproject.toml 声明支持 3.10 —— 结果 3.10/3.11 直接 SyntaxError。
+    domain_tag = re.sub(r"[\s/]+", "-", domain_name).lower()
 
     front = [
         "---",
@@ -239,7 +245,7 @@ def _repo_note(candidate: Candidate) -> str:
         f"created: {repo.created_date()}",
         f"pushed: {repo.pushed_date()}",
         f"数据来源: [{candidate.source_label}]",
-        f"领域: {domain.domain if domain else '待归位'}",
+        f"领域: {domain_name}",
         "能力位:",
     ]
     front += [f"  - {s}" for s in slot_names] or ["  - 待归位"]
@@ -249,7 +255,7 @@ def _repo_note(candidate: Candidate) -> str:
         f"最高排名: {best if best else 'null'}",
         "tags:",
         "  - skill-atlas",
-        f"  - domain/{re.sub(r'[\s/]+', '-', (domain.domain if domain else '待归位')).lower()}",
+        f"  - domain/{domain_tag}",
     ]
     for tag in dict.fromkeys(slot_tags):
         front.append(f"  - slot/{tag}")

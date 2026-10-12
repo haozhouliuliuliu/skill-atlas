@@ -178,7 +178,7 @@ git clone https://github.com/haozhouliuliuliu/skill-atlas
 cd skill-atlas
 
 # Nothing to install for the library or the tests — standard library only.
-python -m unittest discover -s tests -t .     # 152 tests
+python -m unittest discover -s tests -t .     # 157 tests
 python examples/demo.py                       # full pipeline, offline
 ```
 
@@ -325,13 +325,17 @@ Version 0.1, **not yet published**.
 |---|---|
 | `models.py` · `quality.py` · `scoring.py` · `slots.py` | 50 tests |
 | `index.py` · `vault.py` · `query.py` · `snapshot.py` | 47 tests |
-| `api.py` (HTTP layer stubbed) | 20 tests |
+| `api.py` (HTTP layer stubbed) · `console.py` | 25 tests |
 | `cli.py` wiring · end-to-end over the bundled sample | 26 tests |
 | **regression on the committed real crawl** | 9 tests |
 
-**152 tests, all passing, zero dependencies.** CI runs them on Linux, macOS and
-Windows at Python 3.10 and 3.12, plus the offline demo and an offline CLI
+**157 tests, all passing, zero dependencies.** CI runs them on Linux, macOS and
+Windows at **Python 3.10, 3.11 and 3.12**, plus the offline demo and an offline CLI
 walkthrough, so every command documented above is executed on every push.
+
+> The 3.11 job is not padding. A single f-string containing a backslash required
+> Python 3.12 to parse; declaring `>=3.10` while testing 3.10 and 3.12 would have
+> left that version untested. See defect 15 in [DESIGN.md](DESIGN.md).
 
 ### On verifiability
 
