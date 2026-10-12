@@ -1,199 +1,148 @@
 # skill-atlas
 
-**Turn GitHub search results into a replaceable capability-slot index.**
+把 GitHub 上的开源项目，整理成一份**能查、能核对、会更新**的清单。
 
-Most of the cost of starting a project is not writing code — it's not knowing what
-already exists. `skill-atlas` organises candidate projects into **capability slots**
-(a specific position in your stack that will be replaced), keeps several candidates
-per slot, and ranks them by **verifiable metrics** so that "found something better,
-swap it in" has somewhere to land.
+你问它：「我要做一个能自动整理 Word 和 PDF 的 agent」，它告诉你这个需求涉及哪几个位置、每个位置有哪些现成轮子、以及每个轮子能不能信——星标、fork、许可证、多久没更新过，全都是你可以点开核对的数字。
 
-Output is an [Obsidian](https://obsidian.md)-friendly markdown vault: one note per
-capability slot, one note per repository, plus a retrieval entry point that maps
-*"I want to build X"* to *"use these slots"*.
-
-Zero runtime dependencies — standard library only.
+[English README](README.en.md)
 
 ---
 
-## The problem this exists to solve
-
-The obvious way to find a library is to sort GitHub by stars. Try it on the
-"recently created" ranking and you get this:
-
-| Window | Repos | Share that are SEO spam |
-|---|---:|---:|
-| Last 24 hours | 100 | **91 %** |
-| Last 7 days | 100 | 23 % |
-| Last 30 days | 100 | **1 %** |
-
-The spam repos share a fingerprint: they impersonate commercial software
-(`Adobe-Photoshop`, `Microsoft-Office`, `SolidWorks-CAD`), their descriptions are
-templated AI prose, and **the repository contains a single `README.md`**. A typical
-one: `KindStatesman/KMS-Pico` — 614 stars, **0 forks, 0 watchers, 0 issues, 2 KB,
-no license, no code**. Four different accounts behind four of these repos were all
-created on the same day, each with two repositories and zero followers.
-
-Short windows are dominated by star farming because a genuine project cannot
-accumulate meaningful stars in 24 hours while a farm can buy 300–600 cheaply.
-
-### The judgement call, and why it is defensible
-
-"It looks AI-written" is not evidence. The evidence is **repository size**: a
-README-only repo is 2–4 KB, while a real project is rarely under 1 MB. Across 300
-ranking entries the size distribution is cleanly **bimodal**:
+## 一个具体例子
 
 ```
-   ≤ 8 KB : 115   ████████████████████████████████
- 9–50 KB :   3
-51–200 KB:   8   ██
-201 KB–1MB: 16   ████
-   ≥ 1 MB : 158   ███████████████████████████████████████████
+$ skill-atlas query "我要做一个能自动整理 Word 和 PDF 的 agent"
+
+[1] Office 文档生成与解析        命中词：整理 pdf word
+      首选 [79分] storytold/wordcraft    ★2560  fork745
+           [77分] LibreOffice/core       ★4486  fork973
+           [77分] storytold/gridcraft    ★1523  fork575
+
+[2] Agent Skill 规范与范例       命中词：agent
+      首选 [81分] rehan-remade/universal-modder   ★6203  fork597
 ```
 
-The gap between the two modes is almost empty, which means the threshold is not
-sensitive. Cross-validating the two independent criteria:
+它不只是丢给你一个名字，而是：
 
-| | count |
+- 先判断你的需求对应**哪几个「位置」**（这里命中了两个）
+- 每个位置给出**一批候选**，按可核对的指标排序
+- 标出每个候选**为什么被认为相关**（关键词命中了仓库名？还是只出现在描述里？）
+
+---
+
+## 它想解决的是什么问题
+
+直接问 AI「这个功能该用什么库」，你会拿到两三个名字。那两三个名字来自模型的记忆，于是有三个麻烦：
+
+**会过时。** 模型的知识有截止日期。上个月刚出现的项目它没见过，可能反而推荐一个已经没人维护的老库。
+
+**没法核对。** 它说「这个很流行」，但它不会告诉你那个仓库其实是刷星刷出来的空壳，里面只有一份 README。
+
+**每次从零开始。** 你上次已经对比过、否决过的东西，下次开新会话还得重来一遍。
+
+这个项目做的事很窄：把「现在有哪些轮子」从记忆里拿出来，变成一份可以查、可以核对、可以积累的清单。它不管「这个轮子适不适合你的场景」——那件事仍然该问 AI。
+
+---
+
+## 它是怎么挑项目的
+
+这一部分是这个项目里真正花了功夫的地方，也是它和「随便搜一下」的区别。
+
+### 发现一：GitHub 的「新建热榜」上一大半是垃圾
+
+最开始我按最直觉的做法抓数据：最近 24 小时创建的仓库、按星标排序、取前 100。结果榜首是这样的：
+
+```
+KindStatesman/KMS-Pico
+  星标 614    fork 0    watcher 0    issue 0
+  体积 2KB    语言 无     许可证 无
+  仓库里只有 1 个文件：README.md
+  创建于 2026-10-09 13:53:07，最后一次提交 13:53:14 —— 相隔 7 秒
+```
+
+614 个星标，0 个 fork，0 个 watcher，0 个 issue，**仓库里没有一行代码**。它的 README 用 AI 生成的话术描述「优化你的专业桌面环境」，tags 里直接写着 `ms-project-crack`、`photoshop-file-not-found`。四个这样的仓库，来自四个不同账号，**账号全是同一天注册的**，每个只有 2 个仓库、0 个粉丝。
+
+实测三个时间窗口的垃圾比例：
+
+| 榜单 | 100 条里有多少是这种垃圾 |
 |---|---:|
-| flagged by both prose and evidence | 108 |
-| **flagged by prose only (possible false positive)** | **0** |
-| flagged by evidence only (prose missed them) | 7 |
-| passed by both | 185 |
+| 最近 24 小时 | **91 条** |
+| 最近 7 天 | 23 条 |
+| 最近 30 天 | 1 条 |
 
-Zero false positives. Every repository the prose filter flagged was independently
-confirmed by the size/engagement filter.
+原因不难理解：24 小时的窗口里，真实项目根本来不及积累星标（一个正常发布的项目首日能拿到 100 多星就算不错），而刷 300 个星的成本极低，直接霸榜。到 30 天窗口，真项目有几万星，刷子那几百星就挤不进来了。
+
+### 发现二：怎么判断一个仓库是不是空壳
+
+「描述看起来像 AI 写的」不算证据。真正的证据是**仓库体积**：只有一个 README 的仓库大约 2–4 KB，而真有代码的仓库极少低于 1 MB。
+
+我把 300 条榜单记录的体积画出来，分布是干净的双峰：
+
+```
+   ≤ 8 KB  : 115 条   ████████████████████████████████
+   9–50 KB :   3 条
+ 51–200 KB :   8 条   ██
+201 KB–1 MB : 16 条   ████
+    ≥ 1 MB  : 158 条   ███████████████████████████████████████████
+```
+
+两个峰之间几乎是空的，所以这个阈值不敏感——取 9 KB 还是 500 KB，结论都一样。
+
+然后我做了一件我觉得最有价值的事：**用两套完全独立的判据互相验证**。
+
+| | 条数 |
+|---|---:|
+| 两套判据都判为垃圾 | 108 |
+| **只有「描述话术」判为垃圾（可能的误伤）** | **0** |
+| 只有「体积/社区行为」判为垃圾（话术漏判） | 7 |
+| 两套都放行 | 185 |
+
+第一行是结果，第二行才是关键：**话术判据的误伤数是 0**。它标出来的每一条，体积判据都独立确认了。单一判据无论调得多好，都没法报告自己的误判率——只有拿两套不同性质的判据对撞才能得到这个数。
+
+### 发现三：只按星标排序，会把不相关的东西排到最前面
+
+补全成熟项目时，我按能力位写检索式去全量搜库。查「Agent 编排框架」时，第一名是 `microsoft/markitdown`——一个把文件转成 Markdown 的工具，18.9 万星。它只是在 tags 里蹭到了 `langchain` 之类的词。
+
+我也试过 GitHub 自己的「最佳匹配」排序，更糟：它把一个 471 星的小项目排在了 `langchain` 前面。
+
+最后我自己算相关性，依据是**关键词命中的位置**：
+
+| 命中位置 | 含义 |
+|---|---|
+| 仓库名里 | 这个项目**就是**干这个的（`langchain-ai/langchain`） |
+| tags 里 | 它兼做这个 |
+| 只在描述里提到 | 顺带提了一句 |
+
+这个判断依据很强，但也需要配一个例外：**只在描述里被提到的候选，即使指标更强也拿不到首位**。实测中一个 30 万星的仓库因为只在描述里写「比 ollama 更快」，被排在 18 万星的 `ollama` 后面。这是刻意的取舍，有对应的测试钉住。
+
+### 发现四：分数必须能区分「3 万星」和「18 万星」
+
+第一版打分公式我把星标和 fork 的对数分母设得太小，导致 3 万星和 18 万星都拿满分。后果是：
+
+- `bas3line/ascii`（697 星 / 40 fork）得 **86 分**
+- `d3/d3`（113,725 星 / 22,639 fork）得 **84 分**
+
+一个 697 星的项目压过了 d3。分母放大之后就正常了。
+
+现在的公式是：星标 30 + fork 25 + 许可证 10 + 代码量 10 + issue 活跃 10 + 近期活跃 15，全部是可核对的数字。详细说明和踩坑记录都在 [DESIGN.md](DESIGN.md)。
 
 ---
 
-## How it works
+## 怎么用
 
-Two non-overlapping pipelines feed one index.
-
-**1. The ranking pipeline** discovers *new* things. `created:>N days` sorted by
-stars, top 100 per window. Useful for spotting emerging clusters — the
-`Jev`/`Laya` "System-1 decision model" family showed up here with a dozen repos
-before it was on anyone's radar.
-
-**2. The slot pipeline** fills in *mature* things. For every capability slot, a
-curated query is run against **all** of GitHub (`stars:>200`, sorted by stars).
-Without this, LangChain, pandoc and whisper never appear — the ranking pipeline
-only ever sees repos created in the last 30 days.
-
-Both pools are merged, quality-filtered, assigned to slots, scored, and rendered
-into the vault.
-
----
-
-## Scoring
-
-### Quality score (0–100) — verifiable metrics only
-
-| Component | Points | Formula |
-|---|---:|---|
-| Adoption · stars | 30 | `30 × min(1, log10(1+stars)/5.5)` |
-| Adoption · forks | 25 | `25 × min(1, log10(1+forks)/4.6)` |
-| License present | 10 | — |
-| Code volume | 10 | `10 × min(1, size_kb/1000)` |
-| Issue activity | 10 | 10 if ≥10 issues, 6 if ≥1 |
-| Freshness | 15 | ≤7 d: 15 · ≤30 d: 12 · ≤90 d: 7.5 · ≤1 y: 3 · older: 0.75 |
-
-### Rank score = quality + relevance bonus
-
-Relevance is decided by **where the keyword hit**, because position strongly
-predicts what a project is actually for:
-
-| Relevance | Bonus | How it is decided |
-|---|---:|---|
-| manual | +100 | pinned by a human |
-| name | +20 | keyword appears in the repo name (`langchain-ai/langchain`) |
-| ranking | +20 | assigned from the new-repo ranking by keyword rules |
-| topics | 0 | keyword appears in tags |
-| description | −15 | keyword only mentioned in passing |
-
-The +20 for name matches is load-bearing: `freeCodeCamp` genuinely has `d3` in its
-topics (it teaches D3), and without the bonus its 100-point quality score would
-outrank `d3/d3` itself.
-
----
-
-## See it work — no network, no token
-
-```bash
-git clone https://github.com/haozhouliuliuliu/skill-atlas
-cd skill-atlas
-python examples/demo.py
-```
-
-The demo runs the whole pipeline against a small bundled sample whose metrics are
-taken from real crawl results, so the scores are the same ones the live pipeline
-produces:
-
-```
-1. 质量过滤：SEO 引流仓库
-  KindStatesman/KMS-Pico
-      ★614  fork0  2KB  语言=无  许可证=无
-      -> 排除理由: 仅README(2KB)
-
-2. 能力位排序（排序分 = 质量分 + 相关性加成）
-  [本地推理引擎]  候选 3 个
-    首选 排序分 117 (质量  97)  相关=名字   ollama/ollama
-         排序分 115 (质量  95)  相关=名字   ggml-org/llama.cpp
-
-  [浏览器与插件]  候选 2 个
-    首选 排序分 102 (质量  82)  相关=名字   XIU2/UserScript
-         排序分  86 (质量  66)  相关=名字   Tampermonkey/tampermonkey
-      # Tampermonkey 已 558 天未推送 —— 活跃度惩罚起了作用
-
-  [磁盘与文件管理] 的人工剔除:
-    ✂ apache/ranger —— Hadoop 权限管理项目，与终端文件管理器 ranger 同名撞车
-
-4. 空缺报告
-  46 / 54 个能力位没有候选
-  其中包含样本里刻意留空的: 笔记与编辑器 = 空缺
-```
-
-It renders a real vault to `examples/out/` you can open in Obsidian, then
-demonstrates the retrieval entry point:
-
-```
-6. 检索入口：从「我要做什么」反查能力位
-  需求: 我想给项目加日志监控和定时任务
-    [1] 定时任务与调度  匹配度 10.8  命中词: 任务、定时
-          （本样本中该能力位没有候选 —— 机会区）
-    [2] 日志与监控  匹配度 7.3   命中词: 日志、监控
-          grafana/grafana  (质量 94)
-          prometheus/prometheus  (质量 93)
-```
-
-A matched slot with no candidates is reported as an opportunity rather than hidden —
-that emptiness is the signal.
-
----
-
-## Install and use
+### 先看看它长什么样（不需要网络，不需要任何账号）
 
 ```bash
 git clone https://github.com/haozhouliuliuliu/skill-atlas
 cd skill-atlas
 
-# Nothing to install for the library or the tests — standard library only.
-python -m unittest discover -s tests -t .     # 157 tests
-python examples/demo.py                       # full pipeline, offline
+python examples/demo.py                      # 跑完整条流水线，打印上面那些判断过程
+python -m unittest discover -s tests -t .    # 157 个测试
 ```
 
-This is a `src/` layout, so the **CLI** needs the package to be importable —
-either of these:
+`examples/demo.py` 会渲染一个真的库到 `examples/out/`，可以直接用 Obsidian 打开看。
 
-```bash
-pip install -e .                              # gives you a `skill-atlas` command
-export PYTHONPATH=src                         # Windows: set PYTHONPATH=src
-```
-
-The real-GitHub commands below assume one of them. Every command in this README is
-exercised in CI, on Linux, macOS and Windows.
-
-### Try the CLI without network or token
+### 完全离线地试一次命令行
 
 ```bash
 python examples/prepare_data.py --out data --force
@@ -201,190 +150,90 @@ PYTHONPATH=src python -m skill_atlas.cli build --data data --vault vault
 PYTHONPATH=src python -m skill_atlas.cli query "我要加日志监控" --data data
 ```
 
-```
-[1] 日志与监控　（领域：数据基础设施，核心）
-    匹配度 7.3　命中词：日志、监控
-    候选 2 个
-      首选 [ 94分] grafana/grafana          ★77221 fork14838
-           [ 93分] prometheus/prometheus    ★66459 fork10905
-```
+### 真的去抓 GitHub
 
-### Against real GitHub
-
-Four commands, in order:
+这是一个 `src/` 布局的包，命令行需要能 import 到它——二选一：
 
 ```bash
-# 1. Discover what is new:  created:>N days, sorted by stars, top 100 per window.
-python -m skill_atlas.cli fetch
-#    day    fetched=100  low-value= 91 ( 91%)  total=  391358
-
-# 2. Fill in what is mature: one curated query per slot against all of GitHub.
-#    Resumable — it caches per slot and skips what it already has.
-python -m skill_atlas.cli enrich
-
-# 3. Render the vault.
-python -m skill_atlas.cli build --vault vault
-#    candidates  4270
-#    junk        92
-#    slots       54
-#    repos       621
-#    logs        3
-
-# 4. Ask it what to use. Chinese is matched with 2-grams, so plain prose works.
-python -m skill_atlas.cli query "我要做一个能自动整理 Word 和 PDF 的 agent"
-#    [1] Office 文档生成与解析
-#        首选 [ 79分] storytold/wordcraft      ★2560 fork745
-#             [ 77分] LibreOffice/core         ★4486 fork973
+pip install -e .              # 得到一个 skill-atlas 命令
+export PYTHONPATH=src         # Windows: set PYTHONPATH=src
 ```
 
-Two more:
+然后：
 
 ```bash
-python -m skill_atlas.cli inspect ollama/ollama   # quality-check one repository
-python -m skill_atlas.cli slots                   # list all 54 slots + manual overrides
+skill-atlas update      # 抓新建榜 + 按能力位补全，并告诉你相比上次有什么变化
+skill-atlas build       # 确认变化后，渲染 Obsidian 库并推进基线
+skill-atlas query "..." # 反查该用哪些轮子
 ```
 
-### The daily loop: finding something better
-
-Building a snapshot is only half the job. The point of re-running the pipelines
-every day is to notice when **a better candidate shows up for a slot you already
-filled** — so there is a `diff`:
-
-```bash
-skill-atlas fetch && skill-atlas enrich && skill-atlas diff
-```
-
-`diff` compares the freshly crawled ranking against the snapshot from the last
-`build`, and separates three different events that are easy to conflate:
-
-```
-基线 2026-10-10 22:53:34  ->  当前 2026-10-10 22:53:35
-==========================================================================
-
-🔼 出现更好的首选（1 个）—— 这是值得替换的信号
-  [本地推理引擎]  +1 分
-      换下  ollama/ollama
-      换上  newlab/ollama-pro (排序分 118)
-
-🔽 首位变弱（1 个）—— 值得确认原因
-  [浏览器与插件]  -16 分
-      原  XIU2/UserScript
-      现  Tampermonkey/tampermonkey
-
-✅ 新填上的空缺（1 个）: 笔记与编辑器
-
-进入候选列表的新项目（前 10 个能力位）
-  [笔记与编辑器] logseq/logseq
-  [本地推理引擎] newlab/ollama-pro, newlab/ultra-engine
-```
-
-Three deliberate choices:
-
-- **`diff` does not advance the baseline.** Only `build` does. So you can look at
-  what changed, decide, and *then* commit to it.
-- **A filled gap is not an upgrade.** "This slot had no candidate, now it has one"
-  is a different event from "the top pick changed", and reporting both as an upgrade
-  makes the actionable signal harder to see.
-- **A new candidate entering near the bottom of a list is not a replacement signal.**
-  Slots hold dozens of candidates and the tail churns constantly. Only a change at
-  position one is reported as actionable.
-
-Note in the example above: `newlab/ultra-engine` has **300,000 stars** but does not
-take the top pick — it only mentions `ollama` in its description, so it gets the
-description penalty rather than the name bonus. That is the intended trade-off, and
-it is covered by a test.
-
-### Library use
-
-```python
-from skill_atlas import Repo, is_low_value, quality_score, relevance, rank_score
-
-repo = Repo.from_search_item(api_item)
-if is_low_value(repo):
-    ...                     # README-only / templated spam
-score = quality_score(repo)
-rel, why = relevance(repo, '"agent memory" OR mem0 OR "long-term memory"')
-rank = rank_score(score, why)
-```
-
-### A note on language
-
-The **code and documentation** are English. The **slot taxonomy is Chinese**,
-because it is the author's own knowledge base and the slots are the words the
-author actually thinks in. Slot names, queries and synonyms are plain data in
-`slots.py` and `query.py` — replace them with your own vocabulary and the rest of
-the pipeline is unchanged.
+`update` 刻意**不**自动建库。只有基线还停在上一次，`diff` 才能告诉你「**某个位置出现了更好的候选，考虑换掉**」。这是这个工具真正有用的那一刻。
 
 ---
 
-## Status
+## 输出长什么样
 
-Version 0.1, **not yet published**.
+`build` 会渲染一个 Obsidian 库：
 
-| Module | State |
+| 目录 | 里面是什么 |
 |---|---|
-| `models.py` · `quality.py` · `scoring.py` · `slots.py` | 50 tests |
-| `index.py` · `vault.py` · `query.py` · `snapshot.py` | 47 tests |
-| `api.py` (HTTP layer stubbed) · `console.py` | 25 tests |
-| `cli.py` wiring · end-to-end over the bundled sample | 26 tests |
-| **regression on the committed real crawl** | 9 tests |
+| `01-能力位总表.md` | **主入口**。54 个位置一览，标出哪些位置还没有候选 |
+| `02-项目蓝图.md` | 「我要做 X」→ 需要哪几个位置 |
+| `10-能力位/` | 每个位置一个笔记：候选排序表、空缺说明、替换记录、人工剔除记录 |
+| `20-项目条目/` | 每个仓库一个笔记：可核对的指标 + 留给你填的评估栏 |
+| `30-检索日志/` | 每次抓榜的产出与被剔除的垃圾 |
 
-**157 tests, all passing, zero dependencies.** CI runs them on Linux, macOS and
-Windows at **Python 3.10, 3.11 and 3.12**, plus the offline demo and an offline CLI
-walkthrough, so every command documented above is executed on every push.
+用 Obsidian 直接「打开文件夹作为仓库」指向那个目录就行。渲染器会记录自己写过哪些文件，下次重建时只清理自己产出的过期条目，**不会碰你的其他笔记**。
 
-> The 3.11 job is not padding. A single f-string containing a backslash required
-> Python 3.12 to parse; declaring `>=3.10` while testing 3.10 and 3.12 would have
-> left that version untested. See defect 15 in [DESIGN.md](DESIGN.md).
+---
 
-### On verifiability
+## 什么时候该用它，什么时候别用
 
-The numbers in this README come from a real crawl — and you can re-derive them:
+这是我被问过最多的问题，也是我自己最想讲清楚的一件事：
 
-```bash
-python -m unittest tests.test_real_data -v
+| 你的情况 | 更合适的做法 |
+|---|---|
+| 选主流技术栈（Web 框架、ORM、日志库） | **直接问 AI**。它更快，答案和你自己想到的差不多 |
+| 需要某个冷门功能，不确定有没有现成轮子 | **用它**。AI 可能不知道那东西存在 |
+| 想知道「最近有没有出现新东西」 | **用它**。AI 的知识有截止日期 |
+| 要横向对比十几个候选的客观指标 | **用它**。AI 给不出可以核对的数字 |
+| 要判断「这两个哪个更适合我的场景」 | **问 AI**。工具只做关键词匹配，不懂语义 |
+| 你的约束很特殊（必须 MIT、不能有 C++ 依赖…） | **问 AI 拿到候选，再用表格自己筛** |
+
+一句话：**这个工具负责「有哪些、能不能信」，AI 负责「该选哪个」。** 它替代不了 AI，它是为了让 AI 的回答不是从记忆里编出来的。
+
+它还有两个明显的短板，写在前面比藏在后面好：
+
+- **54 个「能力位」是我按自己的项目习惯定的**，名字和检索式都是中文。别人拿去用，得换一套自己的。
+- **相关性只按关键词命中的位置判断，不理解语义**。它能正确地把 `dify` 排在 `markitdown` 前面，但说不清 `dify` 和 `langgraph` 哪个更适合你。
+
+---
+
+## 项目结构
+
+```
+src/skill_atlas/
+  models.py    Repo 数据模型
+  quality.py   判断一个仓库是不是空壳
+  scoring.py   质量分、相关性、排序分
+  slots.py     54 个「能力位」的定义（关键词规则 + 检索式）
+  index.py     把抓取结果拼成索引
+  vault.py     渲染成 Obsidian 库
+  snapshot.py  快照与差分（「发现更好的就替换」）
+  query.py     中文 2-gram 匹配 + 同义词表
+  store.py     原始数据的读写
+  api.py       GitHub 检索客户端
+  console.py   控制台输出编码
+  cli.py       命令行入口
 ```
 
-`tests/fixtures/real_crawl/` contains that crawl, trimmed to **1.1 MB**:
+**零运行时依赖**，只用 Python 标准库。157 个测试，CI 在 Linux / macOS / Windows × Python 3.10 / 3.11 / 3.12 上跑。
 
-- the day/week/month rankings are **complete** (240 KB) — they are what the
-  `91% / 23% / 1%` junk figures are computed from
-- the per-slot search results are cut to **the top 25 candidates per slot**. A slot's
-  top pick is necessarily among them, so the conclusions reproduce.
-
-The test asserts that re-running the pipeline over that data yields **the same 54 top
-picks with the same rank scores** — not merely that the numbers look plausible. It
-doubles as the strongest regression test here: any change to scoring or relevance
-ordering shows up against real data, not just against a synthetic sample.
-
-What is *not* reproducible is the earlier comparison against the pre-rewrite scripts
-(54 of 54 top picks; one benign difference of 621 vs 629 repository notes, documented
-in [DESIGN.md](DESIGN.md)) — that reference implementation is not published.
-
-See [DESIGN.md](DESIGN.md) for the design decisions and the fourteen defects that
-shaped them — including two that were only found by cross-validating two
-independent filters against each other, and two found by tests that no amount of
-manual use would have caught.
+`tests/fixtures/real_crawl/` 里放了一份**裁减到 1.1 MB 的真实抓取数据**，所以 README 里的结论不是「我说的」，而是 `tests/test_real_data.py` 每次都会重新跑一遍的断言。
 
 ---
 
-## Limitations
+## 更多
 
-Stated plainly, because they matter more than the feature list:
-
-- **Recall is biased.** The two pipelines favour newly created and heavily starred
-  projects. Small, stable, excellent libraries that nobody stars are invisible.
-- **Slot assignment is keyword-based** and does suffer name collisions. The
-  `ranger` query pulled in `apache/ranger` (Hadoop authorisation) instead of the
-  terminal file manager. There is a manual calibration layer for exactly this.
-- **Relevance is lexical, not semantic.** It will correctly rank `dify` above
-  `markitdown` for an agent-orchestration query. It cannot tell you whether
-  `dify` or `langgraph` suits your project better.
-- **The quality score measures project health, not fit.** A healthy project can be
-  entirely wrong for what you are building.
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+- [DESIGN.md](DESIGN.md) —— 16 个缺陷的完整剖析。每一个都有症状、根因、修法和教训，包括两个只在发布之后才被 CI 抓到的，以及两个靠「两套独立判据互相对撞」才发现的。
+- [LICENSE](LICENSE) —— MIT
