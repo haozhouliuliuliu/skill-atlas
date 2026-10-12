@@ -19,6 +19,13 @@ Zero runtime dependencies — standard library only.
 
 ---
 
+![The capability slot index](docs/images/01-slots.png)
+
+54 positions, each with a top pick already chosen. The number on the right of each
+row is how many candidates that position has.
+
+---
+
 ## The problem this exists to solve
 
 The obvious way to find a library is to sort GitHub by stars. Try it on the
@@ -121,6 +128,8 @@ outrank `d3/d3` itself.
 ---
 
 ## See it work — no network, no token
+
+![Asking it what to use](docs/images/03-query.png)
 
 ```bash
 git clone https://github.com/haozhouliuliuliu/skill-atlas

@@ -4,11 +4,17 @@
 
 你问它：「我要做一个能自动整理 Word 和 PDF 的 agent」，它告诉你这个需求涉及哪几个位置、每个位置有哪些现成轮子、以及每个轮子能不能信——星标、fork、许可证、多久没更新过，全都是你可以点开核对的数字。
 
+![能力位总表](docs/images/01-slots.png)
+
+上面这张就是它产出的东西：**54 个位置，每个位置都已经挑出首选**，右边那一列数字是该位置有多少个候选。
+
 [English README](README.en.md)
 
 ---
 
 ## 一个具体例子
+
+![反查该用哪些轮子](docs/images/03-query.png)
 
 ```
 $ skill-atlas query "我要做一个能自动整理 Word 和 PDF 的 agent"
@@ -125,6 +131,10 @@ KindStatesman/KMS-Pico
 一个 697 星的项目压过了 d3。分母放大之后就正常了。
 
 现在的公式是：星标 30 + fork 25 + 许可证 10 + 代码量 10 + issue 活跃 10 + 近期活跃 15，全部是可核对的数字。详细说明和踩坑记录都在 [DESIGN.md](DESIGN.md)。
+
+![单个能力位下的候选排序](docs/images/02-slot-detail.png)
+
+上面是「本地推理引擎」这个位置的实际候选表。注意「相关」那一列——`ollama/ollama` 是**名字命中**（关键词就在仓库名里），`open-webui` 是 **topics 命中**（它只是支持 ollama）。两者质量分都是 97，但名字命中的排在前面。
 
 ---
 
