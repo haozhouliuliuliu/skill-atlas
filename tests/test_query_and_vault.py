@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import pathlib
 import sys
 import unittest
@@ -126,6 +127,43 @@ class TestVaultRendering(unittest.TestCase):
         index = slot_index(atlas)
         self.assertIn("本地推理引擎", index)
         self.assertEqual(index["本地推理引擎"][0], "ollama/ollama")
+
+    # -- 过期产物的清理 ------------------------------------------------
+    def test_manifest_is_written(self) -> None:
+        render_vault(self._atlas(), self.tmp, per_slot=5)
+        manifest = self.tmp / "_atlas_manifest.json"
+        self.assertTrue(manifest.exists())
+        files = json.loads(manifest.read_text(encoding="utf-8"))["files"]
+        self.assertIn("01-能力位总表.md", files)
+        self.assertTrue(any(f.startswith("10-能力位/") for f in files))
+
+    def test_stale_generated_notes_are_removed(self) -> None:
+        """回归：渲染器不清扫输出目录，旧条目会残留成死条目。
+
+        在 Obsidian 库里，一条指向已不再是候选的笔记比缺一条更糟 ——
+        它会让人以为那个候选还在。
+        """
+        stale = self.tmp / "20-项目条目" / "old--gone.md"
+        stale.parent.mkdir(parents=True, exist_ok=True)
+        stale.write_text("stale", encoding="utf-8")
+        (self.tmp / "_atlas_manifest.json").write_text(
+            json.dumps({"files": ["20-项目条目/old--gone.md"]}), encoding="utf-8"
+        )
+
+        stats = render_vault(self._atlas(), self.tmp, per_slot=5)
+        self.assertFalse(stale.exists(), "过期笔记应当被清掉")
+        self.assertEqual(stats["removed"], 1)
+
+    def test_files_outside_the_manifest_are_never_touched(self) -> None:
+        """库目录可能被指向用户自己的 Obsidian 仓库，不能误删无关笔记。"""
+        mine = self.tmp / "我的笔记" / "读书笔记.md"
+        mine.parent.mkdir(parents=True, exist_ok=True)
+        mine.write_text("不要删我", encoding="utf-8")
+
+        render_vault(self._atlas(), self.tmp, per_slot=5)
+
+        self.assertTrue(mine.exists())
+        self.assertEqual(mine.read_text(encoding="utf-8"), "不要删我")
 
 
 if __name__ == "__main__":

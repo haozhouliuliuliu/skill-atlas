@@ -118,6 +118,45 @@ def cmd_build(args) -> int:
     return 0
 
 
+def cmd_update(args) -> int:
+    """每日循环：抓取 → 补全 → 报告变化。
+
+    刻意**不**默认建库：`diff` 要在基线还是上一次的状态时才有意义。
+    先看变化、确认之后再 `build`，这是「先看后动」的落点。
+    加 ``--build`` 可以一步到底。
+    """
+    print("=" * 74)
+    print("1/3  fetch    抓新建榜（日/周/月）")
+    print("=" * 74)
+    if cmd_fetch(argparse.Namespace(data=args.data, window=list(WINDOW_ORDER),
+                                    per_page=args.per_page)) != 0:
+        return 1
+
+    print("\n" + "=" * 74)
+    print("2/3  enrich   按能力位检索成熟项目（可断点续跑）")
+    print("=" * 74)
+    if cmd_enrich(argparse.Namespace(data=args.data, only=None,
+                                     min_stars=args.min_stars,
+                                     per_page=args.per_page, force=False)) != 0:
+        return 1
+
+    print("\n" + "=" * 74)
+    print("3/3  diff     与上次基线比较")
+    print("=" * 74)
+    cmd_diff(argparse.Namespace(data=args.data, baseline=None,
+                                per_slot=args.per_slot, json=False, quiet=False))
+
+    if args.build:
+        print("\n" + "=" * 74)
+        print("build         渲染库并推进基线")
+        print("=" * 74)
+        cmd_build(argparse.Namespace(data=args.data, vault=args.vault,
+                                     per_slot=args.per_slot))
+    else:
+        print("\n确认变化后运行 `skill-atlas build` 渲染库并推进基线。")
+    return 0
+
+
 def cmd_diff(args) -> int:
     atlas = _load_atlas(args.data)
     current = take(atlas, per_slot=args.per_slot)
@@ -333,6 +372,23 @@ def build_parser() -> argparse.ArgumentParser:
     p_diff.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     p_diff.add_argument("--quiet", action="store_true", help="只报告首位变更与空缺")
     p_diff.set_defaults(func=cmd_diff)
+
+    p_update = sub.add_parser(
+        "update",
+        help="the daily loop: fetch + enrich + diff",
+        description=(
+            "每日循环：抓取新建榜 → 按能力位补全成熟项目 → 与上次基线比较差异。"
+            "默认不建库，因为 diff 需要基线停留在上一次；加 --build 可一步到底。"
+        ),
+    )
+    p_update.add_argument("--data", type=pathlib.Path, default=store.DEFAULT_DATA_DIR)
+    p_update.add_argument("--vault", type=pathlib.Path, default=pathlib.Path("vault"))
+    p_update.add_argument("--per-page", type=int, default=100)
+    p_update.add_argument("--min-stars", type=int, default=200)
+    p_update.add_argument("--per-slot", type=int, default=10)
+    p_update.add_argument("--build", action="store_true",
+                          help="diff 之后立刻建库并推进基线")
+    p_update.set_defaults(func=cmd_update)
 
     p_inspect = sub.add_parser("inspect", help="quality-check one repository")
     p_inspect.add_argument("repo", help="owner/name")

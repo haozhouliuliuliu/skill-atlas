@@ -12,6 +12,7 @@ import json
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -122,6 +123,76 @@ class TestCli(unittest.TestCase):
         self.assertIn("top_changes", payload)
         self.assertIn("gaps_closed", payload)
         self.assertIn("baseline", payload)
+
+
+class FakeClient:
+    """替身客户端：让 update 能在完全离线的条件下被测到。"""
+
+    token = None
+    pace = 0.0
+
+    def __init__(self, rankings, enrichment):
+        self._rankings = rankings
+        self._enrichment = enrichment
+
+    def created_ranking(self, days, per_page=100):
+        window = {1: "day", 7: "week", 30: "month"}[days]
+        result = self._rankings.get(window)
+        repos = result.repos if result else []
+        meta = {"since": result.since if result else "", "total_count": 100}
+        return repos, meta
+
+    def slot_candidates(self, slot, min_stars=200, per_page=100):
+        return self._enrichment.get(slot.name, [])
+
+
+class TestUpdateCommand(unittest.TestCase):
+    """`update` 是每日循环的入口，必须能离线验证。"""
+
+    def setUp(self) -> None:
+        self.tmp = make_temp_dir()
+        self.data = self.tmp / "data"
+        self.vault = self.tmp / "vault"
+        self.rankings = sample_data.rankings()
+        self.enrichment = sample_data.enrichment()
+        self.client = FakeClient(self.rankings, self.enrichment)
+
+    def tearDown(self) -> None:
+        cleanup(self.tmp)
+
+    def _run_update(self, *extra: str) -> tuple[int, str]:
+        with mock.patch("skill_atlas.cli.SearchClient", return_value=self.client):
+            return run_cli("update", "--data", str(self.data),
+                           "--vault", str(self.vault), *extra)
+
+    def test_runs_all_three_stages(self) -> None:
+        code, out = self._run_update()
+        self.assertEqual(code, 0)
+        for stage in ("fetch", "enrich", "diff"):
+            self.assertIn(stage, out)
+
+    def test_fetch_wrote_the_rankings(self) -> None:
+        self._run_update()
+        self.assertTrue((self.data / "raw" / "day.json").exists())
+        self.assertTrue((self.data / "raw" / "enriched.json").exists())
+
+    def test_does_not_advance_the_baseline_by_default(self) -> None:
+        """默认不建库 —— 否则 diff 的基线就是刚被覆盖的自己，等于没有比较。"""
+        self._run_update()
+        self.assertFalse(snapshot_path(self.data).exists())
+        self.assertIn("没有基线快照", self._run_update()[1])
+
+    def test_build_flag_renders_and_advances(self) -> None:
+        code, out = self._run_update("--build")
+        self.assertEqual(code, 0)
+        self.assertTrue(snapshot_path(self.data).exists())
+        self.assertTrue((self.vault / "01-能力位总表.md").exists())
+        self.assertIn("snapshot", out)
+
+    def test_second_update_reports_no_change(self) -> None:
+        self._run_update("--build")
+        _code, out = self._run_update()
+        self.assertIn("没有任何变化", out)
 
 
 if __name__ == "__main__":

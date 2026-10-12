@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import pathlib
 import re
 
@@ -375,7 +376,9 @@ def _vault_readme(atlas: Atlas, stats, note_count: int, per_slot: int) -> str:
 | `10-能力位/` | 每个能力位一个笔记：候选排序表 + 空缺说明 + 替换记录 + 人工剔除记录 |
 | `20-项目条目/` | 每个仓库一个笔记：可验证指标 + 你的评估栏 |
 | `30-检索日志/` | 每次抓榜的产出与剔除情况 |
-| `90-原始数据/` | 原始 JSON 与生成脚本 |
+| `_atlas_manifest.json` | 本工具生成过哪些文件的清单，用于安全清理过期产物 |
+
+原始抓取数据不放在库里 —— 它在 `data/` 目录，是这份产物的来源而不是产物本身。
 
 ## 三个设计决定
 
@@ -395,14 +398,18 @@ def _vault_readme(atlas: Atlas, stats, note_count: int, per_slot: int) -> str:
 ## 日常维护流程
 
 ```bash
-skill-atlas fetch          # 抓新建榜（日/周/月）
-skill-atlas enrich         # 按能力位定向检索成熟项目
-skill-atlas build          # 生成这个库
-skill-atlas query "我要做 X" # 反查该用哪些能力位
+skill-atlas update            # 抓取 + 补全 + 报告与上次基线的差异
+skill-atlas build             # 确认变化后渲染这个库并推进基线
+skill-atlas query "我要做 X"   # 反查该用哪些能力位
 ```
+
+`update` 刻意不自动建库：只有基线还停在上一次，`diff` 才有意义。
 
 如果某个能力位出现排序分更高的候选，在 `10-能力位/<位名>.md` 里把 ✅ 换到新候选，
 并在「替换记录」写下日期与理由；若判定某条是错误命中，写进 `SLOT_EXCLUDE`。
+
+> 本库由 skill-atlas 生成，它用 `_atlas_manifest.json` 记录自己写过哪些文件，
+> 下次渲染时会清掉不再生成的那些（**不会**碰你的其它笔记）。
 
 ## 当前状态
 
@@ -424,6 +431,56 @@ skill-atlas query "我要做 X" # 反查该用哪些能力位
 # ---------------------------------------------------------------------------
 # 入口
 # ---------------------------------------------------------------------------
+#: 记录本工具生成过哪些文件，用于安全地清理过期产物。
+MANIFEST_NAME = "_atlas_manifest.json"
+
+
+def _load_manifest(out_dir: pathlib.Path) -> set[str]:
+    path = out_dir / MANIFEST_NAME
+    if not path.exists():
+        return set()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return set()
+    files = payload.get("files")
+    return set(files) if isinstance(files, list) else set()
+
+
+def _save_manifest(out_dir: pathlib.Path, files: set[str]) -> None:
+    (out_dir / MANIFEST_NAME).write_text(
+        json.dumps({"files": sorted(files)}, ensure_ascii=False, indent=1),
+        encoding="utf-8",
+    )
+
+
+def _prune(out_dir: pathlib.Path, previous: set[str], current: set[str]) -> list[str]:
+    """删掉「上次由我们生成、这次不再生成」的文件。
+
+    只碰清单里的路径。库目录可能被指向用户自己的 Obsidian 仓库，
+    直接清空目录会删掉与本事无关的笔记 —— 这是不可接受的。
+    """
+    removed: list[str] = []
+    for rel in sorted(previous - current):
+        target = out_dir / rel
+        try:
+            if target.is_file():
+                target.unlink()
+                removed.append(rel)
+        except OSError:
+            continue
+    # 顺手清掉因此变空的目录（不递归删除非空目录）
+    for directory in sorted(
+        (p for p in out_dir.rglob("*") if p.is_dir()), reverse=True
+    ):
+        try:
+            if not any(directory.iterdir()):
+                directory.rmdir()
+        except OSError:
+            continue
+    return removed
+
+
 def render_vault(
     atlas: Atlas,
     out_dir: pathlib.Path,
@@ -431,13 +488,24 @@ def render_vault(
     per_slot: int = 10,
     generated_at: str | None = None,
 ) -> dict[str, int]:
-    """把索引渲染成 markdown 库，返回各类文件数量。"""
+    """把索引渲染成 markdown 库，返回各类文件数量。
+
+    会清理由**上一次渲染**产生、而这次不再产生的文件（通过 ``_atlas_manifest.json``
+    记录）。用户的其它文件不受影响。
+    """
     out_dir = pathlib.Path(out_dir)
     slot_dir = out_dir / "10-能力位"
     repo_dir = out_dir / "20-项目条目"
     log_dir = out_dir / "30-检索日志"
-    raw_dir = out_dir / "90-原始数据"
-    for directory in (slot_dir, repo_dir, log_dir, raw_dir):
+    previous = _load_manifest(out_dir)
+    written: set[str] = set()
+
+    def write(path: pathlib.Path, text: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+        written.add(path.relative_to(out_dir).as_posix())
+
+    for directory in (slot_dir, repo_dir, log_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
     stamp = (generated_at or dt.datetime.now().strftime("%Y-%m-%d %H:%M"))[:10]
@@ -450,36 +518,31 @@ def render_vault(
     note_repos = atlas.note_repos(capped)
 
     for slot, total, shown in stats:
-        (slot_dir / f"{slot.name}.md").write_text(
-            _slot_note(slot, total, shown, atlas), encoding="utf-8"
-        )
+        write(slot_dir / f"{slot.name}.md", _slot_note(slot, total, shown, atlas))
     for candidate in note_repos:
-        (repo_dir / f"{candidate.repo.safe_name()}.md").write_text(
-            _repo_note(candidate), encoding="utf-8"
-        )
+        write(repo_dir / f"{candidate.repo.safe_name()}.md", _repo_note(candidate))
 
-    (out_dir / "README.md").write_text(
-        _vault_readme(atlas, stats, len(note_repos), per_slot), encoding="utf-8"
-    )
-    (out_dir / "01-能力位总表.md").write_text(
-        _index_note(atlas, stats, pretty_time, len(note_repos)), encoding="utf-8"
-    )
-    (out_dir / "02-项目蓝图.md").write_text(_blueprint_note(), encoding="utf-8")
+    write(out_dir / "README.md", _vault_readme(atlas, stats, len(note_repos), per_slot))
+    write(out_dir / "01-能力位总表.md",
+          _index_note(atlas, stats, pretty_time, len(note_repos)))
+    write(out_dir / "02-项目蓝图.md", _blueprint_note())
 
-    log_count = 0
     for window in WINDOW_ORDER:
         text = _log_note(window, atlas, stamp)
         if text:
-            (log_dir / f"{stamp}-{window}.md").write_text(text, encoding="utf-8")
-            log_count += 1
+            write(log_dir / f"{stamp}-{window}.md", text)
+
+    removed = _prune(out_dir, previous, written)
+    _save_manifest(out_dir, written)
 
     return {
         "slots": len(stats),
         "repos": len(note_repos),
-        "logs": log_count,
+        "logs": sum(1 for p in written if p.startswith("30-检索日志/")),
         "candidates": len(atlas.candidates),
         "junk": len(atlas.junk),
         "gaps": sum(1 for _slot, total, _shown in stats if total == 0),
+        "removed": len(removed),
     }
 
 
